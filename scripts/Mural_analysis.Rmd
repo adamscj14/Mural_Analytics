@@ -1,0 +1,93 @@
+---
+title: "Mural_analysis"
+author: "Christopher Adams"
+date: "10/16/2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## FILE PREP
+```{r setup_files, echo = FALSE}
+library(ggplot2)
+
+# Want to associate mural counts with block groups
+setwd("/Users/adamscj/")
+census_df <- read.csv("./Desktop/Penn/Jensen_Lab/phillybg.frame.2016.csv")
+mural_df <- read.csv("Desktop/Penn/Jensen_Lab/mural_blockgroup_count.csv", sep = '\t', col.names = c('geometry', 'mural_count'), header = TRUE)
+block_group_df <- read.csv("Desktop/Penn/Jensen_Lab/formatted_blockgroup_geom.csv", col.names = c("","num_blocks","blockgroup","censustract","area","geometry"), header = FALSE)
+combined_mural_block_df = merge(block_group_df, mural_df, by='geometry')
+id_col <- paste(combined_mural_block_df$censustract / 100, combined_mural_block_df$blockgroup, sep = "_")
+combined_mural_block_df$blockgroupID = id_col
+mural_block_df = data.frame('blockgroupID' = combined_mural_block_df$blockgroupID, 'mural_count' = combined_mural_block_df$mural_count)
+# join the dataframes
+aug_census_df = merge(census_df, mural_block_df, by='blockgroupID')
+
+
+violent_crime <- rowSums(census_df[27:37])
+nonviolent_crime <- rowSums(census_df[38:48])
+aug_census_df$violentcrime_total = violent_crime
+aug_census_df$nonviolentcrime_total = nonviolent_crime
+
+
+mural_presence = aug_census_df$mural_count
+mural_presence[mural_presence >= 1] <- 1
+aug_census_df$mural_presence = as.factor(mural_presence)
+with_murals_df = aug_census_df[aug_census_df$mural_count >= 1,]
+sans_murals_df = aug_census_df[aug_census_df$mural_count == 0,]
+```
+
+## Including Plots
+
+# Make boxplots of variables in mural'ed block groups versus non-mural'ed
+```{r boxplots}
+library(gridExtra)
+#vacantprop boxplot
+box_with_df <- data.frame(vacantprop=with_murals_df$vacantprop, comresprop=with_murals_df$comresprop, segregationmetric=with_murals_df$segregationmetric, povertymetric=with_murals_df$povertymetric, violent=with_murals_df$violentcrime_total, nonviolent= with_murals_df$nonviolentcrime_total, mural_presence=rep('Y', nrow(with_murals_df)))
+box_wo_df <- data.frame(vacantprop=sans_murals_df$vacantprop, comresprop=sans_murals_df$comresprop, segregationmetric=sans_murals_df$segregationmetric, povertymetric=sans_murals_df$povertymetric,violent=sans_murals_df$violentcrime_total, nonviolent= sans_murals_df$nonviolentcrime_total, mural_presence=rep('N', nrow(sans_murals_df)))
+full_box_df <- rbind(box_with_df, box_wo_df)
+
+viol_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = violent)) +
+  geom_boxplot(aes(fill=mural_presence)) +
+  theme(legend.position = 'none', axis.title.x = element_blank(), axis.text.x = element_blank())
+nonviol_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = nonviolent)) +
+  geom_boxplot(aes(fill=mural_presence)) +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+vac_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = vacantprop)) +
+  geom_boxplot(aes(fill=mural_presence)) +
+  theme(legend.position = 'none', axis.title.x = element_blank(), axis.text.x = element_blank())
+com_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = comresprop)) +
+  geom_boxplot(aes(fill=mural_presence)) +
+  theme(axis.title.x = element_blank(), axis.text.x = element_blank())
+seg_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = segregationmetric)) +
+  geom_boxplot(aes(fill=mural_presence)) +
+  theme(legend.position = 'none')
+pov_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = povertymetric)) +
+  geom_boxplot(aes(fill=mural_presence)) +
+  theme()
+grid.arrange(viol_boxplot, nonviol_boxplot, vac_boxplot, com_boxplot, seg_boxplot, pov_boxplot, nrow = 3)
+```
+
+## Logistic Regressions
+
+```{r logistic_setup}
+
+logreg_df <- data.frame("blockgroupID" = aug_census_df$blockgroupID,
+                        "mural_presence" = aug_census_df$mural_presence,
+                        "log_income" = log(aug_census_df$income),
+                        "pop" = aug_census_df$total,
+                        "area" = aug_census_df$area,
+                        "black_prop" = aug_census_df$blackprop,
+                        "vacantprop" = aug_census_df$vacantprop,
+                        "comresprop" = aug_census_df$comresprop)
+
+library(Amelia)
+missmap(logreg_df, main = "Missing values vs observed")
+
+```
+
+# Simple logistic regressions
+Here I'm going to start running them one by one
+I think I'm going to run these in python, because I like python better.
