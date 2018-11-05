@@ -10,6 +10,7 @@ import numpy as np
 import sys
 import os
 import getopt
+from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 
@@ -90,13 +91,24 @@ def perform_simple_log_regs(input_df):
         # remove nan values
         pred_df = pred_df.dropna(0)
 
+        ## just for reference linear regression
+        lin_reg = LinearRegression()
+        lin_reg.fit(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category']))
+        print(pred)
+        print(lin_reg.score(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category'])))
+
+
+
+
         for i in range(iterations):
             [X_train, X_test, Y_train, Y_test] = train_test_split(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category']), test_size = 0.1)
+            #print len(X_test), len(Y_test)
 
-            logreg_fit = LogisticRegression(solver='saga').fit(X_train, Y_train)
-
+            logreg_fit = LogisticRegression(solver='sag').fit(X_train, Y_train)
+            
             #train_error
             train_pred = logreg_fit.predict(X_train)
+            #print sum(train_pred)
             total_tr_errs = float(sum(abs(train_pred-Y_train)))
             total_tr_data_points = len(Y_train)
             train_err_rate = total_tr_errs/total_tr_data_points
