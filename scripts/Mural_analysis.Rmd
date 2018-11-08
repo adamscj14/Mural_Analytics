@@ -48,10 +48,12 @@ library(gridExtra)
 box_with_df <- data.frame(vacantprop=with_murals_df$vacantprop, comresprop=with_murals_df$comresprop, segregationmetric=with_murals_df$segregationmetric, povertymetric=with_murals_df$povertymetric, violent=with_murals_df$violentcrime_total, nonviolent= with_murals_df$nonviolentcrime_total, mural_presence=rep('Y', nrow(with_murals_df)))
 box_wo_df <- data.frame(vacantprop=sans_murals_df$vacantprop, comresprop=sans_murals_df$comresprop, segregationmetric=sans_murals_df$segregationmetric, povertymetric=sans_murals_df$povertymetric,violent=sans_murals_df$violentcrime_total, nonviolent= sans_murals_df$nonviolentcrime_total, mural_presence=rep('N', nrow(sans_murals_df)))
 full_box_df <- rbind(box_with_df, box_wo_df)
-
+# Run t-tests
+violent_ttest = t.test(box_with_df$violent, box_wo_df$violent)
 viol_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = violent)) +
   geom_boxplot(aes(fill=mural_presence)) +
   theme(legend.position = 'none', axis.title.x = element_blank(), axis.text.x = element_blank())
+nonviolent_ttest = t.test(box_with_df$nonviolent, box_wo_df$nonviolent)
 nonviol_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = nonviolent)) +
   geom_boxplot(aes(fill=mural_presence)) +
   theme(axis.title.x = element_blank(), axis.text.x = element_blank())
@@ -68,6 +70,23 @@ pov_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = povertymetric)) +
   geom_boxplot(aes(fill=mural_presence)) +
   theme()
 grid.arrange(viol_boxplot, nonviol_boxplot, vac_boxplot, com_boxplot, seg_boxplot, pov_boxplot, nrow = 3)
+```
+
+# Run t-tests
+```{r ttests}
+# Run t-tests
+violent_ttest = t.test(box_with_df$violent, box_wo_df$violent)
+
+nonviolent_ttest = t.test(box_with_df$nonviolent, box_wo_df$nonviolent)
+
+vacprop_ttest = t.test(box_with_df$vacantprop, box_wo_df$vacantprop)
+
+comresprop_ttest = t.test(box_with_df$comresprop, box_wo_df$comresprop)
+
+segregationmetric_ttest = t.test(box_with_df$segregationmetric, box_wo_df$segregationmetric)
+
+povertymetric_ttest = t.test(box_with_df$povertymetric, box_wo_df$povertymetric)
+
 ```
 
 ## Logistic Regressions
