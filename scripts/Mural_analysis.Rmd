@@ -44,6 +44,7 @@ sans_murals_df = aug_census_df[aug_census_df$mural_count == 0,]
 # Make boxplots of variables in mural'ed block groups versus non-mural'ed
 ```{r boxplots}
 library(gridExtra)
+library(ggpubr)
 #vacantprop boxplot
 box_with_df <- data.frame(vacantprop=with_murals_df$vacantprop, comresprop=with_murals_df$comresprop, segregationmetric=with_murals_df$segregationmetric, povertymetric=with_murals_df$povertymetric, violent=with_murals_df$violentcrime_total, nonviolent= with_murals_df$nonviolentcrime_total, mural_presence=rep('Y', nrow(with_murals_df)))
 box_wo_df <- data.frame(vacantprop=sans_murals_df$vacantprop, comresprop=sans_murals_df$comresprop, segregationmetric=sans_murals_df$segregationmetric, povertymetric=sans_murals_df$povertymetric,violent=sans_murals_df$violentcrime_total, nonviolent= sans_murals_df$nonviolentcrime_total, mural_presence=rep('N', nrow(sans_murals_df)))
@@ -52,22 +53,28 @@ full_box_df <- rbind(box_with_df, box_wo_df)
 violent_ttest = t.test(box_with_df$violent, box_wo_df$violent)
 viol_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = violent)) +
   geom_boxplot(aes(fill=mural_presence)) +
+  stat_compare_means(method = "t.test", comparisons=list(c('Y', 'N')), label.y = 3000) +
   theme(legend.position = 'none', axis.title.x = element_blank(), axis.text.x = element_blank())
 nonviolent_ttest = t.test(box_with_df$nonviolent, box_wo_df$nonviolent)
 nonviol_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = nonviolent)) +
   geom_boxplot(aes(fill=mural_presence)) +
+  stat_compare_means(method = "t.test", comparisons=list(c('Y', 'N')), label.y = 10000) +
   theme(axis.title.x = element_blank(), axis.text.x = element_blank())
 vac_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = vacantprop)) +
   geom_boxplot(aes(fill=mural_presence)) +
+  stat_compare_means(method = "t.test", comparisons=list(c('Y', 'N')), label.y = 0.35) +
   theme(legend.position = 'none', axis.title.x = element_blank(), axis.text.x = element_blank())
 com_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = comresprop)) +
   geom_boxplot(aes(fill=mural_presence)) +
+  stat_compare_means(method = "t.test", comparisons=list(c('Y', 'N')), label.y = 0.80) +
   theme(axis.title.x = element_blank(), axis.text.x = element_blank())
 seg_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = segregationmetric)) +
   geom_boxplot(aes(fill=mural_presence)) +
+  stat_compare_means(method = "t.test", comparisons=list(c('Y', 'N')), label.y = 0.7) +
   theme(legend.position = 'none')
 pov_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = povertymetric)) +
   geom_boxplot(aes(fill=mural_presence)) +
+  stat_compare_means(method = "t.test", comparisons=list(c('Y', 'N')), label.y = 0.8) +
   theme()
 grid.arrange(viol_boxplot, nonviol_boxplot, vac_boxplot, com_boxplot, seg_boxplot, pov_boxplot, nrow = 3)
 ```
@@ -100,7 +107,8 @@ logreg_df <- data.frame("blockgroupID" = aug_census_df$blockgroupID,
                         "area" = aug_census_df$area,
                         "black_prop" = aug_census_df$blackprop,
                         "vacantprop" = aug_census_df$vacantprop,
-                        "comresprop" = aug_census_df$comresprop)
+                        "comresprop" = aug_census_df$comresprop,
+                        "povertymetric" = aug_census_df$povertymetric)
 
 library(Amelia)
 missmap(logreg_df, main = "Missing values vs observed")
@@ -110,3 +118,76 @@ missmap(logreg_df, main = "Missing values vs observed")
 # Simple logistic regressions
 Here I'm going to start running them one by one
 I think I'm going to run these in python, because I like python better.
+
+```{r run_simple_regressions}
+
+# log income model
+log_income_model <- glm(data = logreg_df, formula = mural_presence ~ log_income, family = binomial(link = "logit"))
+
+# poverty model
+poverty_model <- glm(data = logreg_df, formula = mural_presence ~ povertymetric, family = binomial(link = "logit"))
+
+# pop model
+pop_model <- glm(data = logreg_df, formula = mural_presence ~ pop, family = binomial(link = "logit"))
+
+# area model
+area_model <- glm(data = logreg_df, formula = mural_presence ~ area, family = binomial(link = "logit"))
+
+# black prop model
+black_prop_model <- glm(data = logreg_df, formula = mural_presence ~ black_prop, family = binomial(link = "logit"))
+
+# vacantprop model
+vacantprop_model <- glm(data = logreg_df, formula = mural_presence ~ vacantprop, family = binomial(link = "logit"))
+
+# comresprop model
+comresprop_model <- glm(data = logreg_df, formula = mural_presence ~ comresprop, family = binomial(link = "logit"))
+
+```
+
+For log income (p = 0.980):
+```{r simple_log_income}
+summary(log_income_model)
+```
+
+For poverty metric (p = 4.65e-06):
+```{r simple_povertymetric}
+summary(poverty_model)
+```
+
+For population (p = 0.473):
+```{r simple_pop}
+summary(pop_model)
+```
+
+For area (p = 0.00869):
+```{r simple_area}
+summary(area_model)
+```
+
+For black proportion (p = 0.857):
+```{r simple_blackprop}
+summary(black_prop_model)
+```
+
+For vacant proportion (p = 6.13e-13):
+```{r simple_vacantprop}
+summary(vacantprop_model)
+```
+
+For commercial residential proportion (p < 2e-16):
+```{r simple_comresprop}
+summary(comresprop_model)
+```
+
+# Multiple Linear Regression
+
+For log income (p = 0.980):
+```{r multiple_logistic_regression}
+# with every variable
+full_multiple_logreg <- glm(data = logreg_df, formula = mural_presence ~ log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop, family = binomial(link = "logit"))
+summary(full_multiple_logreg)
+
+# with only the significant variables from before
+sig_multiple_logreg <- glm(data = logreg_df, formula = mural_presence ~ povertymetric + area + vacantprop + comresprop, family = binomial(link = "logit"))
+summary(sig_multiple_logreg)
+```

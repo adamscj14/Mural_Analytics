@@ -13,6 +13,7 @@ import getopt
 from sklearn.linear_model import LinearRegression
 from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
+from sklearn.feature_selection import chi2
 
 
 def help():
@@ -81,49 +82,68 @@ def perform_simple_log_regs(input_df):
 
     error_dict = {}
     confusion_mat_dict = {}
-    iterations = 100
-    for pred in predictor_vars:
+    iterations = 1
+    for pred in ['comresprop', "blackprop", 'vacantprop']: #predictor_vars:
         error_dict[pred] = [0,0]
         confusion_mat_dict[pred] = [0,0]
         #print(pred)
-        category_label = np.asarray(input_df['mural_presence'])
-        pred_data = np.asarray(input_df[pred])
+        #category_label = np.asarray(input_df['mural_presence'])
+        #pred_data = np.asarray(input_df[pred])
 
-        pred_dict = {'pred': pred_data, 'category': category_label}
-        pred_df = pd.DataFrame(data=pred_dict)
+
+        #pred_dict = {'pred': pred_data, 'category': category_label}
+        #pred_df = pd.DataFrame(data=pred_dict)
+        pred_df = pd.concat([input_df[pred],input_df['mural_presence']], axis = 1, keys = ['pred', 'category'])
+
 
         # remove nan values
         pred_df = pred_df.dropna(0)
-
+        #print(pred_df)
+        #print(np.asarray(pred_df['pred']).reshape(-1, 1))
         ## just for reference linear regression
         lin_reg = LinearRegression()
         lin_reg.fit(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category']))
-        print(pred)
-        print(lin_reg.score(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category'])))
+        #print(pred)
+        print(pred,"Linear Regression R^2",lin_reg.score(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category'])))
 
         confusion_tr_matrix = [0,0,0,0]
         confusion_test_matrix = [0, 0, 0, 0]
 
+        scores, pvalues = chi2(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category']))
+        print("Score: ",scores)
+        print("Pvalue: ", pvalues)
+
         for i in range(iterations):
 
-            [X_train, X_test, Y_train, Y_test] = train_test_split(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category']), test_size = 0.1)
-            #print len(X_test), len(Y_test)
+            [X_train, X_test, Y_train, Y_test] = train_test_split(np.asarray(pred_df['pred']).reshape(-1, 1), np.asarray(pred_df['category']), test_size = 0.25)
+            #print(X_train.shape)
 
-            logreg_fit = LogisticRegression().fit(X_train, Y_train)
-            
+            logreg = LogisticRegression(fit_intercept = True, solver = 'lbfgs', tol = 0.0000000001, verbose = True, C=np.inf)
+            print logreg
+            #logreg_fit = logreg.fit(X_train, Y_train)
+            logreg_fit = logreg.fit(list(np.asarray(pred_df['pred']).reshape(-1, 1)), list(np.asarray(pred_df['category'])))
+            #print logreg_fit
+
             #train_error
-            train_pred = logreg_fit.predict(X_train)
+            train_pred = logreg_fit.predict(list(X_train))
+            #print(list(train_pred))
             #print sum(train_pred)
-            for pos in range(len(Y_train)):
-                dict_key = "{}{}".format(train_pred[pos], Y_train[pos])
 
-                confusion_tr_matrix[confusion_dict[dict_key]] += 1
+            total_tr_errs = 0
 
+            #for pos in range(len(Y_train)):
+                #dict_key = "{}{}".format(str(train_pred[pos]), str(Y_train[pos]))
 
-            total_tr_errs = float(sum(abs(train_pred-Y_train)))
-            total_tr_data_points = len(Y_train)
-            train_err_rate = total_tr_errs/total_tr_data_points
+                #confusion_tr_matrix[confusion_dict[dict_key]] += 1
 
+                #if int(train_pred[pos]) != int():
+                #    total_tr_errs += 1
+                #total_tr_errs = float(train_pred[pos]) - train_pred[pos][int(train_pred[pos])]
+
+            #total_tr_errs = float(sum(abs(train_pred-Y_train)))
+            #total_tr_data_points = len(Y_train)
+            #train_err_rate = float(total_tr_errs)/total_tr_data_points
+            train_err_rate = 1- logreg_fit.score(list(X_train), list(Y_train))
             error_dict[pred][0] += train_err_rate
             '''
             print("total_test_errs: {}\ntotal_test_datapoints: {}\nerr_rate: {}\n".format(total_tr_errs,
@@ -132,18 +152,25 @@ def perform_simple_log_regs(input_df):
             '''
             #test error
 
-            test_pred = logreg_fit.predict(X_test)
+            test_pred = logreg_fit.predict_proba(X_test)
+            #print test_pred
 
-            for pos in range(len(Y_test)):
-                dict_key = "{}{}".format(test_pred[pos], Y_test[pos])
+            total_test_errs = 0
 
-                confusion_test_matrix[confusion_dict[dict_key]] += 1
+            #for pos in range(len(Y_test)):
+                # dict_key = "{}{}".format(test_pred[pos], Y_test[pos])
+                #
+                # confusion_test_matrix[confusion_dict[dict_key]] += 1
+                #
+                # if test_pred[pos] != Y_test[pos]:
+                #     total_test_errs += 1
 
+                #total_test_errs += float(Y_test[pos]) - test_pred[pos][int(Y_test[pos])]
 
-            total_test_errs = float(sum(abs(test_pred-Y_test)))
-            total_test_data_points = len(Y_test)
-            test_err_rate = total_test_errs/total_test_data_points
-
+            #total_test_errs = float(sum(abs(test_pred-Y_test)))
+            #total_test_data_points = len(Y_test)
+            #test_err_rate = float(total_test_errs)/total_test_data_points
+            test_err_rate = 1 - logreg_fit.score(X_test, Y_test)
             error_dict[pred][1] += test_err_rate
 
             '''
@@ -155,23 +182,23 @@ def perform_simple_log_regs(input_df):
         avg_tr_confusion_mat = [x/iterations for x in confusion_tr_matrix]
         avg_test_confusion_mat = [x / iterations for x in confusion_test_matrix]
         confusion_mat_dict[pred][0] = avg_tr_confusion_mat
-        confusion_mat_dict[pred][0] = avg_test_confusion_mat
+        confusion_mat_dict[pred][1] = avg_test_confusion_mat
 
 
     for pred in error_dict:
-        pred_tr_confusion_matrix = confusion_mat_dict[pred][0]
-        pred_test_confusion_matrix = confusion_mat_dict[pred][0]
-
-        print(pred)
-        print("Confusion Matrix Train:\nInferred x Truth\n    0     1")
-
-        print("0 | {}    {}\n1 | {}    {}".format(pred_tr_confusion_matrix[0], pred_tr_confusion_matrix[1],
-                                                  pred_tr_confusion_matrix[2], pred_tr_confusion_matrix[3]))
-        print("Confusion Matrix Test:\nInferred x Truth\n    0     1")
-        print("0 | {}    {}\n1 | {}    {}".format(pred_test_confusion_matrix[0], pred_test_confusion_matrix[1],
-                                                  pred_test_confusion_matrix[2], pred_test_confusion_matrix[3]))
-        print("Train Error: {}\nTest Error: {}\n--------------------------------------------".format(error_dict[pred][0] / float(iterations),
-                                                                       error_dict[pred][1] / float(iterations)))
+    #     pred_tr_confusion_matrix = confusion_mat_dict[pred][0]
+    #     pred_test_confusion_matrix = confusion_mat_dict[pred][1]
+    #
+         print(pred)
+    #     print("Confusion Matrix Train:\nInferred x Truth\n    0     1")
+    #
+    #     print("0 | {}    {}\n1 | {}    {}".format(pred_tr_confusion_matrix[0], pred_tr_confusion_matrix[1],
+    #                                               pred_tr_confusion_matrix[2], pred_tr_confusion_matrix[3]))
+    #     print("Confusion Matrix Test:\nInferred x Truth\n    0     1")
+    #     print("0 | {}    {}\n1 | {}    {}".format(pred_test_confusion_matrix[0], pred_test_confusion_matrix[1],
+    #                                               pred_test_confusion_matrix[2], pred_test_confusion_matrix[3]))
+         print("Train Error: {}\nTest Error: {}\n--------------------------------------------".format(error_dict[pred][0] / float(iterations),
+                                                                        error_dict[pred][1] / float(iterations)))
 
 if __name__ == '__main__':
     main(sys.argv[1:])
