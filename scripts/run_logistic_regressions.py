@@ -81,6 +81,9 @@ def driver(data_file, output_file):
     # perform multiple logistic regressions
     perform_multiple_log_regs(input_df, predictor_vars)
 
+    simplified_preds = ['vacantprop', 'comresprop']
+    #perform_multiple_log_regs(input_df, simplified_preds)
+
 
 def perform_multiple_log_regs(input_df, predictor_vars):
 
@@ -98,13 +101,12 @@ def perform_multiple_log_regs(input_df, predictor_vars):
     logreg = LogisticRegression()
     Y_train = np.asarray(master_df['mural_presence'])
     X_train = np.asarray(master_df[predictor_vars])
-    print master_df[predictor_vars]
-    print master_df['mural_presence']
 
     logreg_fit = logreg.fit(X_train, Y_train)
+    print "intercept: ", logreg_fit.intercept_
+    print "coefficients: ",logreg_fit.coef_
 
     prediction = logreg_fit.predict(X_train)
-
     for pos in range(len(Y_train)):
         dict_key = "{}{}".format(int(prediction[pos]), int(Y_train[pos]))
 
