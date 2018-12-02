@@ -119,7 +119,6 @@ missmap(logreg_df, main = "Missing values vs observed")
 
 # Simple logistic regressions
 Here I'm going to start running them one by one
-I think I'm going to run these in python, because I like python better.
 
 ```{r run_simple_regressions}
 
@@ -197,21 +196,45 @@ predictions = factor(round(predict(comresprop_model, logreg_df, type = "response
 confusionMatrix(predictions, factor(logreg_df$mural_presence))
 ```
 
-# Multiple Linear Regression
+# Multiple Logistic Regression
 
-For log income (p = 0.980):
-```{r multiple_logistic_regression}
+```{r multiple_logistic_regression_full}
 # with every variable
 full_multiple_logreg <- glm(data = logreg_df, formula = mural_presence ~ log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop, family = binomial(link = "logit"))
 summary(full_multiple_logreg)
 predictions = factor(round(predict(full_multiple_logreg, logreg_df, type = "response"), digits = 0))
 confusionMatrix(predictions, factor(logreg_df$mural_presence))
+```
 
-
+```{r multiple logistic_regression_significant_only}
 # with only the significant variables from before
 sig_multiple_logreg <- glm(data = logreg_df, formula = mural_presence ~ povertymetric + area + vacantprop + comresprop, family = binomial(link = "logit"))
 summary(sig_multiple_logreg)
 predictions = factor(round(predict(sig_multiple_logreg, logreg_df, type = "response"), digits = 0))
 confusionMatrix(predictions, factor(logreg_df$mural_presence))
 
+```
+
+# Decision Trees
+
+```{r simple Decision Tree}
+library(rpart)
+# with every variable
+full_dec_tree <- rpart(data = logreg_df, formula = mural_presence ~ log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop, method = 'class')
+
+pfit_full_dec_tree = prune(full_dec_tree, cp = 
+                             full_dec_tree$cptable[which.min(full_dec_tree$cptable[,"xerror"]),"CP"])
+plot(pfit_full_dec_tree, uniform = TRUE)
+text(pfit_full_dec_tree, use.n=TRUE, all=TRUE, cex=.8)
+
+predictions = predict(pfit_full_dec_tree, logreg_df, type = "class")
+confusionMatrix(predictions, factor(logreg_df$mural_presence))
+```
+
+```{r random forest}
+library(randomForest)
+# with every variable
+rf_fit <- randomForest(formula = mural_presence ~ log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop, data = logreg_df, ntree=100, importance = TRUE, na.action=na.omit)
+
+rf_fit
 ```
