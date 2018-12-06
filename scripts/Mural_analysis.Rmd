@@ -120,7 +120,7 @@ missmap(logreg_df, main = "Missing values vs observed")
 # Simple logistic regressions
 Here I'm going to start running them one by one
 
-```{r run_simple_regressions}
+```{r run_simple_log_regressions}
 
 # log income model
 log_income_model <- glm(data = logreg_df, formula = mural_presence ~ log_income, family = binomial(link = "logit"))
@@ -235,6 +235,116 @@ confusionMatrix(predictions, factor(logreg_df$mural_presence))
 library(randomForest)
 # with every variable
 rf_fit <- randomForest(formula = mural_presence ~ log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop, data = logreg_df, ntree=100, importance = TRUE, na.action=na.omit)
+imp <- importance(rf_fit, type=1, scale = F)
 
 rf_fit
+imp
+
+```
+
+# Model the number of murals when murals exist
+
+```{r number_of_murals_setup}
+mural_num_predictors_df <- data.frame("blockgroupID" = aug_census_df$blockgroupID,
+                        "mural_count" = aug_census_df$mural_count,
+                        "log_income" = log(aug_census_df$income),
+                        "pop" = aug_census_df$total,
+                        "area" = aug_census_df$area,
+                        "black_prop" = aug_census_df$blackprop,
+                        "vacantprop" = aug_census_df$vacantprop,
+                        "comresprop" = aug_census_df$comresprop,
+                        "povertymetric" = aug_census_df$povertymetric)
+```
+
+## Simple Linear Regressions
+
+```{r run_simple_log_regressions}
+
+# log income model
+log_income_lin_model <- lm(data = mural_num_predictors_df, formula = mural_count ~ log_income)
+
+# poverty model
+poverty_lin_model <- lm(data = mural_num_predictors_df, formula = mural_count ~ povertymetric)
+
+# pop model
+pop_lin_model <- lm(data = mural_num_predictors_df, formula = mural_count ~ pop)
+
+# area model
+area_lin_model <- lm(data = mural_num_predictors_df, formula = mural_count ~ area)
+
+# black prop model
+black_prop_lin_model <- lm(data = mural_num_predictors_df, formula = mural_count ~ black_prop)
+
+# vacantprop model
+vacantprop_lin_model <- lm(data = mural_num_predictors_df, formula = mural_count ~ vacantprop)
+
+# comresprop model
+comresprop_lin_model <- lm(data = mural_num_predictors_df, formula = mural_count ~ comresprop)
+
+```
+
+For log income (p = 0.708), R^2 = 0.00106:
+```{r simple_log_income}
+summary(log_income_lin_model)
+```
+
+For poverty metric (p = 0.000169), R^2 = 0.01061:
+```{r simple_povertymetric}
+summary(poverty_lin_model)
+
+```
+
+For population (p = 0.24515), y_intercept (p = 0.00182), R^2 = 0.001012:
+```{r simple_pop}
+summary(pop_lin_model)
+```
+
+For area (p = 2.26 e -05), R^2 = 0.01338:
+```{r simple_area}
+summary(area_lin_model)
+```
+
+For black proportion (p = 0.911), yintercept (p=3.46e-11), R^2 = 9e-06:
+```{r simple_blackprop}
+summary(black_prop_lin_model)
+```
+
+For vacant proportion (p = 7.492-09), R^2 = 0.02474:
+```{r simple_vacantprop}
+summary(vacantprop_lin_model)
+```
+
+For commercial residential proportion (p < 2e-16), R^2 = 0.092:
+```{r simple_comresprop}
+summary(comresprop_lin_model)
+```
+# Multiple Linear Regression
+Running it on all predictors, R^2 = 0.1274
+```{r multiple_linear_regression_full}
+# with every variable
+full_multiple_linreg <- lm(data = mural_num_predictors_df, formula = mural_count ~ log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop)
+summary(full_multiple_linreg)
+```
+Only using the significant predictors from the logistic regression, R^2 = 0.1081
+```{r multiple linear_regression_significant_only}
+# with only the significant variables from before
+sig_multiple_linreg <- lm(data = mural_num_predictors_df, formula = mural_count ~ povertymetric + area + vacantprop + comresprop)
+summary(sig_multiple_linreg)
+```
+# Decision Trees for predicting number of murals
+
+```{r simple Decision Tree for mural count}
+library(rpart)
+# with every variable
+full_dec_tree_mural_count <- rpart(data = mural_num_predictors_df, formula = mural_count ~ log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop, method = 'anova')
+
+pfit = prune(full_dec_tree_mural_count, 
+             cp = full_dec_tree_mural_count$cptable[which.min(full_dec_tree_mural_count$cptable[,"xerror"]),"CP"])
+
+plot(pfit, uniform = TRUE)
+text(pfit, use.n=TRUE, all=TRUE, cex=.8)
+
+plot(full_dec_tree_mural_count, uniform = TRUE )
+text(full_dec_tree_mural_count, use.n=TRUE, all=TRUE, cex=.8)
+
 ```
