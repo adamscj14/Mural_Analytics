@@ -348,3 +348,14 @@ plot(full_dec_tree_mural_count, uniform = TRUE )
 text(full_dec_tree_mural_count, use.n=TRUE, all=TRUE, cex=.8)
 
 ```
+# Random Forest for mural count prediction
+```{r random forest mural count prediction}
+library(randomForest)
+# with every variable
+rf_fit <- randomForest(formula = mural_count ~ log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop, data = mural_num_predictors_df, ntree=100, importance = TRUE, na.action=na.omit)
+imp <- importance(rf_fit, type=1, scale = F)
+
+rf_fit
+imp
+
+```
