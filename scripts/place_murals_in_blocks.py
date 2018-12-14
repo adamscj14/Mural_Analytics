@@ -5,8 +5,7 @@
 
 ###############################################################################
 ###
-### This script will create the output full model file given
-### the proper mer count file
+### This script will place the murals into their respective blocks
 ###
 ###############################################################################
 

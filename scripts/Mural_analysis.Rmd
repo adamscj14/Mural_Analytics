@@ -361,6 +361,7 @@ imp
 
 
 
+
 # Gather Propensity scores
 
 ## Generate Dataframe holding info for all propensity scores
@@ -378,10 +379,13 @@ absent_df <- propensity_df[propensity_df$mural_presence == 0,]
 
 ## Using multiple logistic regression
 ```{r prop_score_comp_log_reg, echo=FALSE}
+library(MatchIt)
+log_reg_prop_df = na.omit(data.frame(blockgroup_id = logreg_df$blockgroupID, mural_presence = logreg_df$mural_presence, prop_scores = full_log_reg_preds))
+match.out = matchit(mural_presence ~ prop_scores, distance = log_reg_prop_df$prop_scores, data = log_reg_prop_df, ratio = 1)
+summary(match.out)
+plot(match.out, type = 'jitter')
+plot(match.out, type = 'hist')
 
-log_reg_present_prop_df <- data.frame(blockgroup_id = present_df$blockgroup_id, prop_score = present_df$full_log_reg)
-log_reg_absent_prop_df <- data.frame(blockgroup_id = absent_df$blockgroup_id, prop_score = absent_df$full_log_reg)
-sorted_present_prop_df <- log_reg_present_prop_df[order(-log_reg_present_prop_df$prop_score),]
-sorted_absent_prop_df <- log_reg_absent_prop_df[order(-log_reg_absent_prop_df$prop_score),]
-
+data_matched = match.data(match.out)
+dim(data_matched)
 ```
