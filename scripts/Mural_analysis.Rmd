@@ -9,7 +9,7 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## FILE PREP
+# FILE PREP
 ```{r setup_files, echo = FALSE}
 library(ggplot2)
 
@@ -39,9 +39,9 @@ with_murals_df = aug_census_df[aug_census_df$mural_count >= 1,]
 sans_murals_df = aug_census_df[aug_census_df$mural_count == 0,]
 ```
 
-## Including Plots
+# Including Plots
 
-# Make boxplots of variables in mural'ed block groups versus non-mural'ed
+## Make boxplots of variables in mural'ed block groups versus non-mural'ed
 ```{r boxplots}
 library(gridExtra)
 library(ggpubr)
@@ -79,7 +79,7 @@ pov_boxplot <- ggplot(full_box_df, aes(x=mural_presence, y = povertymetric)) +
 grid.arrange(viol_boxplot, nonviol_boxplot, vac_boxplot, com_boxplot, seg_boxplot, pov_boxplot, nrow = 3)
 ```
 
-# Run t-tests
+## Run t-tests
 ```{r ttests}
 # Run t-tests
 violent_ttest = t.test(box_with_df$violent, box_wo_df$violent)
@@ -96,6 +96,7 @@ povertymetric_ttest = t.test(box_with_df$povertymetric, box_wo_df$povertymetric)
 
 ```
 
+# Predict Mural Presence
 ## Logistic Regressions
 
 ```{r logistic_setup}
@@ -117,7 +118,7 @@ missmap(logreg_df, main = "Missing values vs observed")
 
 ```
 
-# Simple logistic regressions
+### Simple logistic regressions
 Here I'm going to start running them one by one
 
 ```{r run_simple_log_regressions}
@@ -149,7 +150,6 @@ For log income (p = 0.980):
 ```{r simple_log_income}
 summary(log_income_model)
 predictions = factor(c(round(predict(log_income_model, logreg_df, type = "response"), digits = 0)))
-confusionMatrix(predictions, rev(factor(logreg_df$mural_presence)))
 confusionMatrix(predictions, factor(logreg_df$mural_presence))
 ```
 
@@ -157,7 +157,6 @@ For poverty metric (p = 4.65e-06):
 ```{r simple_povertymetric}
 summary(poverty_model)
 predictions = factor(round(predict(poverty_model, logreg_df, type = "response"), digits = 0))
-confusionMatrix(predictions, rev(factor(logreg_df$mural_presence)))
 confusionMatrix(predictions, factor(logreg_df$mural_presence))
 ```
 
@@ -196,7 +195,7 @@ predictions = factor(round(predict(comresprop_model, logreg_df, type = "response
 confusionMatrix(predictions, factor(logreg_df$mural_presence))
 ```
 
-# Multiple Logistic Regression
+### Multiple Logistic Regression
 
 ```{r multiple_logistic_regression_full}
 # with every variable
@@ -215,7 +214,7 @@ confusionMatrix(predictions, factor(logreg_df$mural_presence))
 
 ```
 
-# Decision Trees
+## Decision Trees
 
 ```{r simple Decision Tree}
 library(rpart)
@@ -318,7 +317,7 @@ For commercial residential proportion (p < 2e-16), R^2 = 0.092:
 ```{r simple_comresprop}
 summary(comresprop_lin_model)
 ```
-# Multiple Linear Regression
+## Multiple Linear Regression
 Running it on all predictors, R^2 = 0.1274
 ```{r multiple_linear_regression_full}
 # with every variable
@@ -331,7 +330,7 @@ Only using the significant predictors from the logistic regression, R^2 = 0.1081
 sig_multiple_linreg <- lm(data = mural_num_predictors_df, formula = mural_count ~ povertymetric + area + vacantprop + comresprop)
 summary(sig_multiple_linreg)
 ```
-# Decision Trees for predicting number of murals
+## Decision Trees for predicting number of murals
 
 ```{r simple Decision Tree for mural count}
 library(rpart)
@@ -348,7 +347,7 @@ plot(full_dec_tree_mural_count, uniform = TRUE )
 text(full_dec_tree_mural_count, use.n=TRUE, all=TRUE, cex=.8)
 
 ```
-# Random Forest for mural count prediction
+## Random Forest for mural count prediction
 ```{r random forest mural count prediction}
 library(randomForest)
 # with every variable
@@ -357,5 +356,32 @@ imp <- importance(rf_fit, type=1, scale = F)
 
 rf_fit
 imp
+
+```
+
+
+
+# Gather Propensity scores
+
+## Generate Dataframe holding info for all propensity scores
+```{r propensity score gathering, echo=FALSE}
+
+full_log_reg_preds = predict(full_multiple_logreg, logreg_df, type = 'response')
+
+pruned_dec_tree_pred_table = predict(pfit_full_dec_tree, logreg_df)
+pruned_dec_tree_preds = pruned_dec_tree_pred_table[,2]
+
+propensity_df <- data.frame(blockgroup_id = logreg_df$blockgroupID, mural_presence = logreg_df$mural_presence, full_log_reg = full_log_reg_preds, pruned_dec_tree = pruned_dec_tree_preds)
+present_df <- propensity_df[propensity_df$mural_presence == 1,]
+absent_df <- propensity_df[propensity_df$mural_presence == 0,]
+```
+
+## Using multiple logistic regression
+```{r prop_score_comp_log_reg, echo=FALSE}
+
+log_reg_present_prop_df <- data.frame(blockgroup_id = present_df$blockgroup_id, prop_score = present_df$full_log_reg)
+log_reg_absent_prop_df <- data.frame(blockgroup_id = absent_df$blockgroup_id, prop_score = absent_df$full_log_reg)
+sorted_present_prop_df <- log_reg_present_prop_df[order(-log_reg_present_prop_df$prop_score),]
+sorted_absent_prop_df <- log_reg_absent_prop_df[order(-log_reg_absent_prop_df$prop_score),]
 
 ```
