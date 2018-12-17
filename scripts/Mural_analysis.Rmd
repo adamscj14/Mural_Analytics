@@ -28,8 +28,10 @@ aug_census_df = merge(census_df, mural_block_df, by='blockgroupID')
 
 violent_crime <- rowSums(census_df[27:37])
 nonviolent_crime <- rowSums(census_df[38:48])
+total_crime <- rowSums(census_df[27:48])
 aug_census_df$violentcrime_total = violent_crime
 aug_census_df$nonviolentcrime_total = nonviolent_crime
+aug_census_df$total_crime = total_crime
 
 
 mural_presence = aug_census_df$mural_count
@@ -387,5 +389,8 @@ plot(match.out, type = 'jitter')
 plot(match.out, type = 'hist')
 
 data_matched = match.data(match.out)
-dim(data_matched)
+control_df = aug_census_df[match.out$match.matrix[,1],]
+case_df = aug_census_df[rownames(match.out$match.matrix,),]
+
+t.test(control_df$violentcrime_total, case_df$violentcrime_total, paired = TRUE, alternative = "less")
 ```
