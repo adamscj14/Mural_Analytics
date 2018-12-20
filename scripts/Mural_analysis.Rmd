@@ -392,5 +392,39 @@ data_matched = match.data(match.out)
 control_df = aug_census_df[match.out$match.matrix[,1],]
 case_df = aug_census_df[rownames(match.out$match.matrix,),]
 
+
+# violent crime, two-sided: 0.06182
+t.test(control_df$violentcrime_total, case_df$violentcrime_total, paired = TRUE) #, #alternative = "less")
+# less violent crime in case: 0.03091
 t.test(control_df$violentcrime_total, case_df$violentcrime_total, paired = TRUE, alternative = "less")
+
+# nonviolent crime, two-sided p value: 0.3524
+t.test(control_df$nonviolentcrime_total, case_df$nonviolentcrime_total, paired = TRUE) #, #alternative = "less")
+# less nonviolent crime in case: 0.1762
+t.test(control_df$nonviolentcrime_total, case_df$nonviolentcrime_total, paired = TRUE, alternative = "less")
+```
+
+```{r ensure_covariates_are_matched, echo=FALSE}
+## log_income + povertymetric + pop + area + black_prop + vacantprop + comresprop
+
+# log income p = 0.1447
+t.test(log(control_df$income), log(case_df$income), paired = TRUE) #, #alternative = "less")
+
+# poverty metric p = 0.08655
+t.test(control_df$povertymetric, case_df$povertymetric, paired = TRUE) #, #alternative = "less")
+
+# total pop p = 0.6574
+t.test(control_df$total, case_df$total, paired = TRUE) #, #alternative = "less")
+
+# area p = 0.9011
+t.test(control_df$area, case_df$area, paired = TRUE) #, #alternative = "less")
+
+# black prop p = 0.5285
+t.test(control_df$blackprop, case_df$blackprop, paired = TRUE) #, #alternative = "less")
+
+# vacant prop p = 0.7754
+t.test(control_df$vacantprop, case_df$vacantprop, paired = TRUE) #, #alternative = "less")
+
+# vacant prop p = p-value = 0.256
+t.test(control_df$comresprop, case_df$comresprop, paired = TRUE) #, #alternative = "less")
 ```
